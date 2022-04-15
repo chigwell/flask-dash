@@ -63,7 +63,6 @@ def check_party_code(party_code):
             f.write(party_code + ';' + party_code)
 
 
-
 def transform_csv(input_file_name):
     init_files()
 
@@ -128,6 +127,12 @@ def create_dataframe(input_file_name):
     df = pd.read_csv("data/output.csv", parse_dates=["created"], sep=';')
     df['created'] = pd.to_datetime(df["created"], format='%Y-%m-%d %H:%M:%S')
     df['votes'] = df['votes'].astype('int')
-    df_total = df.groupby(['party_code'], as_index=False)['votes'].sum()
+
+    df_parties = pd.read_csv('data/parties.csv', sep=";")
+
+    df = df_parties.merge(df, how='inner', on='party_code')
+
+
+    df_total = df.groupby(['party_code', 'party_name'], as_index=False)['votes'].sum()
     df_total = df_total.sort_values(by=['votes'], ascending=False)
     return df, df_total

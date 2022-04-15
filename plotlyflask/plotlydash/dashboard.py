@@ -86,10 +86,10 @@ def render_results(dash_app):
     linear = dcc.Graph(
         figure={
             'data': [
-                {'x': df_total['party_code'], 'y': df_total['votes'], 'type': 'bar'},
+                {'x': df_total['party_name'], 'y': df_total['votes'], 'type': 'bar'},
             ],
             'layout': {
-                'title': 'Dash Data Visualization'
+                'title': 'Total results'
             }
         }
     )
