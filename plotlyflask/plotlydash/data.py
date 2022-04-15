@@ -1,6 +1,6 @@
 """Prepare data for Plotly Dash."""
 import re
-import numpy as np
+import csv
 import pandas as pd
 from datetime import datetime, timezone
 
@@ -48,6 +48,21 @@ def init_files():
     init_warnings_file()
     init_parties_file()
 
+def check_party_code(party_code):
+    file_name = "data/parties.csv"
+    file = open(file_name)
+    csvreader = csv.reader(file)
+    new_party = True
+    for row in csvreader:
+        row_party_code = re.split("(?<!\\\\);", row[0])[0]
+        if row_party_code == party_code:
+            new_party = False
+    if new_party:
+        with open(file_name, 'a') as f:
+            f.write("\n")
+            f.write(party_code + ';' + party_code)
+
+
 
 def transform_csv(input_file_name):
     init_files()
@@ -85,6 +100,7 @@ def transform_csv(input_file_name):
                                                                                                                  'elem: '
                                             + str(pair_count) + '. Please, check line: ' + line_str)
                 if not result_error:
+                    check_party_code(party_code)
                     with open('data/output.csv', 'a') as f:
                         constituency_name = constituency_name.replace('\,', ',')
                         f.write(str(datetime.now(timezone.utc).strftime(
