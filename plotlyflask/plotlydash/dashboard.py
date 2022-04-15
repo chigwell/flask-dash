@@ -48,7 +48,6 @@ def init_dashboard(server):
             multiple=False
         ),
         html.Div(id='output-data-upload'),
-        render_results(dash_app)
     ])
 
     def to_bytes(s):
@@ -58,6 +57,7 @@ def init_dashboard(server):
             return codecs.encode(s, 'utf-8')
         else:
             raise TypeError("Expected bytes or string, but got %s." % type(s))
+
     @dash_app.callback(Output('output-data-upload', 'children'),
                               Input('upload-data', 'contents'),
                               State('upload-data', 'filename'),
