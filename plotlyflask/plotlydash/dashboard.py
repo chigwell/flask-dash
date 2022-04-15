@@ -27,18 +27,6 @@ def init_dashboard(server):
     # Custom HTML layout
     dash_app.index_string = html_layout
 
-    fig = dcc.Graph(
-        figure={
-            'data': [
-                {'x': [1, 2, 3], 'y': [4, 1, 2], 'type': 'bar', 'name': 'SF'},
-                {'x': [1, 2, 3], 'y': [2, 4, 5], 'type': 'bar', 'name': u'Montréal'},
-            ],
-            'layout': {
-                'title': 'Dash Data Visualization'
-            }
-        }
-    )
-
     # Create Layout
     dash_app.layout = html.Div([
         dcc.Upload(
@@ -61,7 +49,6 @@ def init_dashboard(server):
             multiple=False
         ),
         html.Div(id='output-data-upload'),
-        fig
     ])
 
 
@@ -90,34 +77,28 @@ def init_dashboard(server):
     return dash_app.server
 
 def render_results(dash_app):
-    df = create_dataframe('input.csv')
+    df_detailed, df_total = create_dataframe('input.csv')
 
     # Custom HTML layout
     dash_app.index_string = html_layout
 
+
+    linear = dcc.Graph(
+        figure={
+            'data': [
+                {'x': df_total['party_code'], 'y': df_total['votes'], 'type': 'bar'},
+            ],
+            'layout': {
+                'title': 'Dash Data Visualization'
+            }
+        }
+    )
+
     # Create Layout
     res = html.Div(
         children=[
-            dcc.Graph(
-                id="histogram-graph",
-                figure={
-                    "data": [
-                        {
-                            "x": df["party_code"],
-                            "text": df["party_code"],
-                            "customdata": df["votes"],
-                            "name": "Results.",
-                            "type": "histogram",
-                        }
-                    ],
-                    "layout": {
-                        "title": "Results",
-                        "height": 500,
-                        "padding": 150,
-                    },
-                },
-            ),
-            create_data_table(df),
+            linear,
+            create_data_table(df_detailed),
         ],
         id="dash-container",
     )

@@ -112,5 +112,6 @@ def create_dataframe(input_file_name):
     df = pd.read_csv("data/output.csv", parse_dates=["created"], sep=';')
     df['created'] = pd.to_datetime(df["created"], format='%Y-%m-%d %H:%M:%S')
     df['votes'] = df['votes'].astype('int')
-
-    return df
+    df_total = df.groupby(['party_code'], as_index=False)['votes'].sum()
+    df_total = df_total.sort_values(by=['votes'], ascending=False)
+    return df, df_total
