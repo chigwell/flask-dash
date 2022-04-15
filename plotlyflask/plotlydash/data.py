@@ -23,11 +23,24 @@ def init_warnings_file():
 
 
 def init_parties_file():
+    parties_list = [
+                        {"party_code": "C","party_name": "Conservative"},
+                        {"party_code": "L","party_name": "Labour"},
+                        {"party_code": "SNP","party_name": "Scottish National Party"},
+                        {"party_code": "LD","party_name": "Liberal Democrats"},
+                        {"party_code": "G","party_name": "Green Party"},
+                        {"party_code": "Ind","party_name": "Independent"},
+                    ]
+
     file_name = "data/parties.csv"
     erase_file(file_name)
     with open(file_name, 'w+') as f:
         f.write('party_code;party_name')
-        f.write("\n")
+        for party in parties_list:
+            f.write("\n")
+            party_code = party['party_code']
+            party_name = party['party_name']
+            f.write(party_code + ';' + party_name)
 
 
 def init_files():
