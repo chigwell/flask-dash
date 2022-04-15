@@ -135,4 +135,5 @@ def create_dataframe(input_file_name):
 
     df_total = df.groupby(['party_code', 'party_name'], as_index=False)['votes'].sum()
     df_total = df_total.sort_values(by=['votes'], ascending=False)
-    return df, df_total
+    winner_row = df_total.iloc[0]
+    return df, df_total, winner_row

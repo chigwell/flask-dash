@@ -77,11 +77,13 @@ def init_dashboard(server):
     return dash_app.server
 
 def render_results(dash_app):
-    df_detailed, df_total = create_dataframe('input.csv')
+    df_detailed, df_total, winner_row = create_dataframe('input.csv')
 
     # Custom HTML layout
     dash_app.index_string = html_layout
 
+    winner = html.Div([
+        html.H1('The winner is ' + winner_row['party_name'] + '!')])
 
     linear = dcc.Graph(
         figure={
@@ -97,6 +99,7 @@ def render_results(dash_app):
     # Create Layout
     res = html.Div(
         children=[
+            winner,
             linear,
             create_data_table(df_detailed),
         ],
