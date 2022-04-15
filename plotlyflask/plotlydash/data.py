@@ -99,8 +99,7 @@ def transform_csv(input_file_name):
                                                                                           'and/or '
                                                                                           'party. '
                                                                                           'Please, '
-                                                                                          'check line: '
-                                                                                          '' + line_str)
+                                                                                          'check line: ')
     for warning_message in warning_messages:
         with open('data/warnings.csv', 'a') as f:
             f.write(warning_message)

@@ -5,7 +5,8 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
 import base64
-import io
+import plotly.graph_objs as go
+
 
 from .data import create_dataframe
 from .layout import html_layout
@@ -25,6 +26,18 @@ def init_dashboard(server):
     )
     # Custom HTML layout
     dash_app.index_string = html_layout
+
+    fig = dcc.Graph(
+        figure={
+            'data': [
+                {'x': [1, 2, 3], 'y': [4, 1, 2], 'type': 'bar', 'name': 'SF'},
+                {'x': [1, 2, 3], 'y': [2, 4, 5], 'type': 'bar', 'name': u'Montréal'},
+            ],
+            'layout': {
+                'title': 'Dash Data Visualization'
+            }
+        }
+    )
 
     # Create Layout
     dash_app.layout = html.Div([
@@ -48,7 +61,9 @@ def init_dashboard(server):
             multiple=False
         ),
         html.Div(id='output-data-upload'),
+        fig
     ])
+
 
     def to_bytes(s):
         if type(s) is bytes:
