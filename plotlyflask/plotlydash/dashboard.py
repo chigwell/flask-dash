@@ -8,7 +8,6 @@ import base64
 import plotly.express as px
 import pandas as pd
 import json
-import geojson
 
 from .data import create_dataframe
 from .layout import html_layout
