@@ -8,7 +8,6 @@ import base64
 import plotly.express as px
 import pandas as pd
 import json
-import geojson
 
 from .data import create_dataframe
 from .layout import html_layout
@@ -99,6 +98,9 @@ def render_results(dash_app):
             }
         }
     )
+    fig = px.histogram(df_total_votes, x="voters_turnout_by_constituency", y="votes_turnout_by_party_per_constituency",
+                       marginal="box",
+                       hover_data=df_total_votes.columns)
 
 
     # Create Layout
@@ -114,6 +116,8 @@ def render_results(dash_app):
             create_data_table(df_all_results),
             html.H1('Detailed results'),
             create_data_table(df_total_votes),
+            html.H1('Normalized results over a turnout'),
+            dcc.Graph(figure=fig)
         ],
         id="dash-container",
         style={
