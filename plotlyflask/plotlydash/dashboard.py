@@ -1,6 +1,5 @@
 """Instantiate a Dash app."""
 import dash
-import dash_arcgis
 
 import dash_core_components as dcc
 import dash_html_components as html
@@ -8,7 +7,8 @@ import dash_table
 import base64
 import plotly.express as px
 import pandas as pd
-
+import json
+import geojson
 
 from .data import create_dataframe
 from .layout import html_layout
@@ -25,6 +25,8 @@ def init_dashboard(server):
             "https://fonts.googleapis.com/css?family=Lato",
             "https://codepen.io/chriddyp/pen/bWLwgP.css"
         ],
+        external_scripts=[
+        ]
     )
     # Custom HTML layout
     dash_app.index_string = html_layout
@@ -53,7 +55,6 @@ def init_dashboard(server):
         html.Div(id='output-data-upload'),
     ])
 
-
     def to_bytes(s):
         if type(s) is bytes:
             return s
@@ -63,9 +64,9 @@ def init_dashboard(server):
             raise TypeError("Expected bytes or string, but got %s." % type(s))
 
     @dash_app.callback(Output('output-data-upload', 'children'),
-                              Input('upload-data', 'contents'),
-                              State('upload-data', 'filename'),
-                              State('upload-data', 'last_modified'))
+                       Input('upload-data', 'contents'),
+                       State('upload-data', 'filename'),
+                       State('upload-data', 'last_modified'))
     def update_output(list_of_contents, var2, var3):
         if list_of_contents is not None:
             content_type, content_string = list_of_contents.split(',')
@@ -78,8 +79,9 @@ def init_dashboard(server):
 
     return dash_app.server
 
+
 def render_results(dash_app):
-    df_detailed, df_total, winner_row = create_dataframe('input.csv')
+    df_all_results, df_total, df_constituencies, parliament_seats, df_total_votes, winner_row = create_dataframe('input.csv')
 
     # Custom HTML layout
     dash_app.index_string = html_layout
@@ -90,7 +92,7 @@ def render_results(dash_app):
     linear = dcc.Graph(
         figure={
             'data': [
-                {'x': df_total['party_name'], 'y': df_total['votes'], 'type': 'bar'},
+                {'x': df_total['party_name'], 'y': df_total['party_votes'], 'type': 'bar'},
             ],
             'layout': {
                 'title': 'Total results'
@@ -99,42 +101,26 @@ def render_results(dash_app):
     )
 
 
-    counties = "{'type':'FeatureCollection','features': [{'type': 'Feature', 'properties': {'district': '101-Bois-de-Liesse'},'id':'101','style': {'__comment': 'all SVG styles allowed','fill':'red', 'stroke-width':'3','fill-opacity':0.6},'geometry': {'type':'Polygon','coordinates':[[[-2.43896484375,50.83369767098071            ],            [              -0.37353515625,              50.958426723359935            ],            [              -0.263671875,              52.09300763963822            ],            [              -1.51611328125,              53.44880683542759            ],            [              -3.18603515625,              52.72298552457069            ],            [              -2.43896484375,              50.83369767098071            ]          ]        ]      }    }  ]}"
-    df = pd.DataFrame([['101-Bois-de-Liesse',     '2481',      '1829', 'Joly','plurality',        '101']], columns=['district', 'Coderre', 'Bergeron', 'winner', 'result', 'district_id'])
-
-    geojson = px.data.election_geojson()#counties#
-    #print(df.iloc[0])
-    print(geojson)
-
-    fig = dash_arcgis.MapView(
-        id="geojson-layer-map",
-        center=[-168, 46],
-        zoom=3,
-        basemap="streets",
-        style={"height": "800px", "margin-top": "20px"},
-        children=[
-            dash_arcgis.GeoJSONLayer(
-                id="geojson-layer",
-                copyright="USGS Earthquakes",
-                url="https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson",
-            ),
-        ],
-    )
-
     # Create Layout
     res = html.Div(
         children=[
             winner,
             linear,
-            dcc.Graph(figure=fig),
+            html.H1('Parlamient seats'),
+            create_data_table(parliament_seats),
+            html.H1('Results by each constituency'),
+            create_data_table(df_constituencies),
             html.H1('All results'),
-            create_data_table(df_detailed),
+            create_data_table(df_all_results),
+            html.H1('Detailed results'),
+            create_data_table(df_total_votes),
         ],
         id="dash-container",
+        style={
+            'width': '100%',
+        }
     )
     return res
-
-
 
 
 def create_data_table(df):
@@ -148,5 +134,3 @@ def create_data_table(df):
         page_size=10,
     )
     return table
-
-

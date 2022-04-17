@@ -9,6 +9,7 @@ def erase_file(file_name):
     f = open(file_name, "w+")
     f.close()
 
+
 def init_output_file():
     file_name = "data/output.csv"
     erase_file(file_name)
@@ -24,13 +25,13 @@ def init_warnings_file():
 
 def init_parties_file():
     parties_list = [
-                        {"party_code": "C","party_name": "Conservative"},
-                        {"party_code": "L","party_name": "Labour"},
-                        {"party_code": "SNP","party_name": "Scottish National Party"},
-                        {"party_code": "LD","party_name": "Liberal Democrats"},
-                        {"party_code": "G","party_name": "Green Party"},
-                        {"party_code": "Ind","party_name": "Independent"},
-                    ]
+        {"party_code": "C", "party_name": "Conservative"},
+        {"party_code": "L", "party_name": "Labour"},
+        {"party_code": "SNP", "party_name": "Scottish National Party"},
+        {"party_code": "LD", "party_name": "Liberal Democrats"},
+        {"party_code": "G", "party_name": "Green Party"},
+        {"party_code": "Ind", "party_name": "Independent"},
+    ]
 
     file_name = "data/parties.csv"
     erase_file(file_name)
@@ -47,6 +48,7 @@ def init_files():
     init_output_file()
     init_warnings_file()
     init_parties_file()
+
 
 def check_party_code(party_code):
     file_name = "data/parties.csv"
@@ -124,16 +126,64 @@ def transform_csv(input_file_name):
 def create_dataframe(input_file_name):
     """Create Pandas DataFrame from local CSV."""
     transform_csv(input_file_name)
-    df = pd.read_csv("data/output.csv", parse_dates=["created"], sep=';')
-    df['created'] = pd.to_datetime(df["created"], format='%Y-%m-%d %H:%M:%S')
-    df['votes'] = df['votes'].astype('int')
+    df_all_results = pd.read_csv("data/output.csv", parse_dates=["created"], sep=';')
+    df_all_results['votes'] = df_all_results['votes'].astype('int')
+
+    total_votes = df_all_results['votes'].sum()
 
     df_parties = pd.read_csv('data/parties.csv', sep=";")
 
-    df = df_parties.merge(df, how='inner', on='party_code')
+    df_all_results = df_parties.merge(df_all_results, how='inner', on='party_code')
+    df_all_results.rename(columns={'party_name_x': 'party_name'}, inplace=True)
+
+    df_total_votes = df_all_results.groupby(['constituency_name', 'party_name', 'party_code'], as_index=False)[
+        'votes'].sum()
+
+    df_total_votes.rename(columns={'votes': 'party_votes'}, inplace=True)
+
+    df_total_votes['max_votes'] = df_total_votes.groupby(['constituency_name'])['party_votes'].transform(max)
+
+    df_total_votes['is_winner'] = df_total_votes['party_votes'] == df_total_votes['max_votes']
+
+    df_total_votes_by_constituency = df_total_votes.groupby(['constituency_name'], as_index=False)['party_votes'].sum()
+    df_total_votes_by_constituency.rename(columns={'party_votes': 'constituency_total_votes'}, inplace=True)
+
+    df_electorates = pd.read_csv('data/constituency_uk_2019.csv', sep=";")
+
+    df_total_votes = df_total_votes.merge(df_electorates, how='left', on='constituency_name')
+    df_total_votes = df_total_votes.merge(df_total_votes_by_constituency, on='constituency_name')
+
+    df_total_votes['constituency_total_voters'] = df_total_votes['constituency_total_voters'].fillna(0)
+    df_total_votes['constituency_total_voters'] = df_total_votes['constituency_total_voters'].astype('int')
+    df_total_votes['party_votes'] = df_total_votes['party_votes'].astype('int')
+    df_total_votes['constituency_total_votes'] = df_total_votes['constituency_total_votes'].astype('int')
+    df_total_votes['votes_turnout_by_party_per_constituency'] = df_total_votes['party_votes'] / df_total_votes[
+        'constituency_total_votes']
+    df_total_votes['votes_turnout_by_party_over_uk'] = df_total_votes['party_votes'] / total_votes
 
 
-    df_total = df.groupby(['party_code', 'party_name'], as_index=False)['votes'].sum()
-    df_total = df_total.sort_values(by=['votes'], ascending=False)
+    df_total_votes['voters_turnout_by_constituency'] = df_total_votes['constituency_total_votes'] / df_total_votes[
+        'constituency_total_voters']
+
+    df_total = df_total_votes.groupby(['party_code', 'party_name'], as_index=False)['party_votes'].sum()
+    df_total = df_total.sort_values(by=['party_votes'], ascending=False)
     winner_row = df_total.iloc[0]
-    return df, df_total, winner_row
+
+    df_constituencies = df_total_votes[df_total_votes["is_winner"] == True]
+    df_constituencies.rename(columns={'party_code': 'party_winner_code'}, inplace=True)
+    df_constituencies.rename(columns={'party_name': 'party_winner_name'}, inplace=True)
+    df_constituencies.rename(columns={'party_votes': 'party_winner_votes'}, inplace=True)
+    df_constituencies = df_constituencies.sort_values(by=['constituency_name'], ascending=True)
+    #df_constituencies = df_constituencies.reset_index()
+
+
+    parliament_seats = df_constituencies
+    parliament_seats.drop(
+        ['party_winner_votes', 'max_votes', 'is_winner', 'constituency_total_voters', 'constituency_total_votes',
+         'votes_turnout_by_party_per_constituency', 'votes_turnout_by_party_over_uk', 'voters_turnout_by_constituency'],
+        axis=1, inplace=True)
+    parliament_seats = parliament_seats.groupby(['party_winner_name']).size().reset_index(name='counts')
+
+    parliament_seats = parliament_seats.sort_values(by=['counts'], ascending=False)
+
+    return df_all_results, df_total, df_constituencies, parliament_seats, df_total_votes, winner_row
