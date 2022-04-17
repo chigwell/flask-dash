@@ -5,7 +5,10 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
 import base64
-import io
+import plotly.express as px
+import pandas as pd
+import json
+import geojson
 
 from .data import create_dataframe
 from .layout import html_layout
@@ -22,6 +25,8 @@ def init_dashboard(server):
             "https://fonts.googleapis.com/css?family=Lato",
             "https://codepen.io/chriddyp/pen/bWLwgP.css"
         ],
+        external_scripts=[
+        ]
     )
     # Custom HTML layout
     dash_app.index_string = html_layout
@@ -48,7 +53,6 @@ def init_dashboard(server):
             multiple=False
         ),
         html.Div(id='output-data-upload'),
-        render_results(dash_app)
     ])
 
     def to_bytes(s):
@@ -58,10 +62,11 @@ def init_dashboard(server):
             return codecs.encode(s, 'utf-8')
         else:
             raise TypeError("Expected bytes or string, but got %s." % type(s))
+
     @dash_app.callback(Output('output-data-upload', 'children'),
-                              Input('upload-data', 'contents'),
-                              State('upload-data', 'filename'),
-                              State('upload-data', 'last_modified'))
+                       Input('upload-data', 'contents'),
+                       State('upload-data', 'filename'),
+                       State('upload-data', 'last_modified'))
     def update_output(list_of_contents, var2, var3):
         if list_of_contents is not None:
             content_type, content_string = list_of_contents.split(',')
@@ -74,41 +79,48 @@ def init_dashboard(server):
 
     return dash_app.server
 
+
 def render_results(dash_app):
-    df = create_dataframe('input.csv')
+    df_all_results, df_total, df_constituencies, parliament_seats, df_total_votes, winner_row = create_dataframe('input.csv')
 
     # Custom HTML layout
     dash_app.index_string = html_layout
 
+    winner = html.Div([
+        html.H1('The winner is ' + winner_row['party_name'] + '!')])
+
+    linear = dcc.Graph(
+        figure={
+            'data': [
+                {'x': df_total['party_name'], 'y': df_total['party_votes'], 'type': 'bar'},
+            ],
+            'layout': {
+                'title': 'Total results'
+            }
+        }
+    )
+
+
     # Create Layout
     res = html.Div(
         children=[
-            dcc.Graph(
-                id="histogram-graph",
-                figure={
-                    "data": [
-                        {
-                            "x": df["party_code"],
-                            "text": df["party_code"],
-                            "customdata": df["votes"],
-                            "name": "Results.",
-                            "type": "histogram",
-                        }
-                    ],
-                    "layout": {
-                        "title": "Results",
-                        "height": 500,
-                        "padding": 150,
-                    },
-                },
-            ),
-            create_data_table(df),
+            winner,
+            linear,
+            html.H1('Parlamient seats'),
+            create_data_table(parliament_seats),
+            html.H1('Results by each constituency'),
+            create_data_table(df_constituencies),
+            html.H1('All results'),
+            create_data_table(df_all_results),
+            html.H1('Detailed results'),
+            create_data_table(df_total_votes),
         ],
         id="dash-container",
+        style={
+            'width': '100%',
+        }
     )
     return res
-
-
 
 
 def create_data_table(df):
@@ -122,5 +134,3 @@ def create_data_table(df):
         page_size=10,
     )
     return table
-
-
